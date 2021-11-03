@@ -15,7 +15,6 @@ def instrument_file(file):
     with open(file) as fin:
         content = fin.read()
 
-    print('what')
     delta = 0
     for match in re.finditer(r'gl[A-Z][^(]*', content):
         if match[0] in FILTER:

@@ -1,0 +1,5 @@
+TODO
+========================================================================
+- [x] OpenGL function instrumentation (through Makefile)
+- [ ] Move buffer management outside of main
+- [ ] Move shader management outside of main

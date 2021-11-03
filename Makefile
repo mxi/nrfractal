@@ -2,7 +2,7 @@ DEP_DYNAMIC := glew glfw3
 DEP_STATIC := cglm
 
 CC := gcc
-CFLAGS := -Wall -Werror -Wshadow -pedantic --std=c99
+CFLAGS := -Wall -Werror -Wshadow -pedantic --std=c99 -x c
 CFLAGS += -DGLEW_STATIC
 CFLAGS += $(shell pkg-config --cflags --shared --libs $(DEP_DYNAMIC))
 CFLAGS += $(shell pkg-config --cflags --static $(DEP_STATIC))
@@ -10,7 +10,7 @@ CFLAGS += $(shell pkg-config --cflags --static $(DEP_STATIC))
 SOURCES := $(wildcard *.c)
 INSTRUMENTS := $(SOURCES:.c=.inst)
 OBJECTS := $(SOURCES:.c=.o)
-TARGET := nrfractal
+TARGET := a.out
 
 
 all: $(TARGET)
@@ -21,7 +21,7 @@ clean:
 	rm $(TARGET)
 
 instrument: $(INSTRUMENTS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -DINSTRUMENT $(CFLAGS) -o $(TARGET) $^
 
 $(TARGET): $(SOURCES)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -30,6 +30,6 @@ $(OBJECTS): %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ -
 
 $(INSTRUMENTS): %.inst: %.c
-	./instrument $< > $@
+	./instrument.py $< > $@
 
 .PHONY: all clean instrument

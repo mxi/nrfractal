@@ -6,12 +6,10 @@
 #include <GLFW/glfw3.h>
 #include <cglm/cglm.h>
 
-#include "gleasy.h"
 #include "util.h"
 #include "complex.h"
+#include "glgoodies.h"
 
-
-#define GL_CHECK(x) x; puts("test")
 
 #define QUICK_GLERR_CHECK()                                            \
 	GLenum error;                                                      \
@@ -20,7 +18,7 @@
 	}
 
 
-complex_t
+complex
 combinatoric_fma(complex *cmp, int cnt, int k)
 {
 	if (cnt <= 0) {
@@ -229,6 +227,8 @@ main(void)
 		glUseProgram(program);
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, ELEM_LENGTH, GL_UNSIGNED_INT, (void*)0);
+
+		QUICK_GLERR_CHECK();
 
 		int width, height;
 		glfwGetWindowSize(win, &width, &height);

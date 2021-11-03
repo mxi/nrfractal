@@ -69,7 +69,7 @@ void main() {
 	float closeWeight = 0;
 	for (int i = 0; i < 4; ++i) {
 		float weight = distance(u_roots[i], guess);
-		if (weight < closeWeight) {
+		if (weight > closeWeight) {
 			closeIndex = i;
 			closeWeight = weight;
 		}
