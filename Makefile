@@ -2,7 +2,7 @@ DEP_DYNAMIC := glew glfw3
 DEP_STATIC := cglm
 
 CC := gcc
-CFLAGS := -Wall -Werror -Wshadow -pedantic --std=c99 -x c
+CFLAGS := -Wall -Werror -Wshadow -pedantic --std=c99 -lm
 CFLAGS += -DGLEW_STATIC
 CFLAGS += $(shell pkg-config --cflags --shared --libs $(DEP_DYNAMIC))
 CFLAGS += $(shell pkg-config --cflags --static $(DEP_STATIC))
@@ -21,7 +21,7 @@ clean:
 	rm $(TARGET)
 
 instrument: $(INSTRUMENTS)
-	$(CC) -DINSTRUMENT $(CFLAGS) -o $(TARGET) $^
+	$(CC) -DINSTRUMENT -x c $(CFLAGS) -o $(TARGET) $^
 
 $(TARGET): $(SOURCES)
 	$(CC) $(CFLAGS) -o $@ $^

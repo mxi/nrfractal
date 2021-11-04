@@ -35,6 +35,28 @@ complex_div(complex a, complex b) {
 }
 
 
+complex
+complex_combinatoric_fma(complex *terms, int cnt, int k)
+{
+	if (cnt <= 0) {
+		return COMPLEX_ONE;
+	}
+	complex *nterms = terms + 1;
+	int ncnt = cnt - 1;
+
+	complex zero = COMPLEX_ZERO, 
+			one  = COMPLEX_ZERO;
+	if (k < cnt) {
+		zero = complex_combinatoric_fma(nterms, ncnt, k);
+	}
+	if (k > 0) {
+		one = complex_mul(
+			terms[0], complex_combinatoric_fma(nterms, ncnt, k-1));
+	}
+	return complex_add(zero, one);
+}
+
+
 void
 complex_str(char *buf, size_t bfsz, complex a) {
 	snprintf(buf, bfsz, "%.2f + %.2fi", a.re, a.im);

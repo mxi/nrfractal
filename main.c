@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
  
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -9,35 +10,6 @@
 #include "util.h"
 #include "complex.h"
 #include "glgoodies.h"
-
-
-#define QUICK_GLERR_CHECK()                                            \
-	GLenum error;                                                      \
-	while ((error = glGetError()) != GL_NO_ERROR) {                    \
-		fprintf(stderr, "GLerror %d\n", error);                        \
-	}
-
-
-complex
-combinatoric_fma(complex *cmp, int cnt, int k)
-{
-	if (cnt <= 0) {
-		return COMPLEX_ONE;
-	}
-	complex *ncmp = cmp + 1;
-	size_t ncnt = cnt - 1;
-
-	complex zero = COMPLEX_ZERO, 
-			one  = COMPLEX_ZERO;
-	if (k < cnt) {
-		zero = combinatoric_fma(ncmp, ncnt, k);
-	}
-	if (k > 0) {
-		one = complex_mul(
-				cmp[0], combinatoric_fma(ncmp, ncnt, k-1));
-	}
-	return complex_add(zero, one);
-}
 
 
 int
@@ -79,6 +51,7 @@ main(void)
 		 1.0f,  1.0f,
 		-1.0f,  1.0f,
 	};
+
 	unsigned int elems[ELEM_LENGTH] = { 
 		0, 1, 2,
 		0, 2, 3,
@@ -161,20 +134,16 @@ main(void)
 	};
 
 	complex roots[NDEGREES] = {
-		{ -0.2f, -0.2f },
-		{ -0.1f, -0.1f },
-		{  0.0f,  0.0f },
-		{  0.1f,  0.1f },
-		//{ -0.5f, -0.5f },
-		//{  0.5f, -0.5f },
-		//{  0.5f,  0.5f },
-		//{ -0.5f,  0.5f },
+		{ 0.0f, 0.0f },
+		{ 1.0f, 0.0f },
+		{ 0.0f, 1.0f },
+		{ 1.0f, 1.0f },
 	};
 
 	complex coefs[NDEGREES+1];
 	
 	for (int i = 0; i < NROOTS; ++i) {
-		coefs[i] = combinatoric_fma(roots, NROOTS, NROOTS-i);	
+		coefs[i] = complex_combinatoric_fma(roots, NROOTS, NROOTS-i);	
 	}
 	coefs[NDEGREES] = COMPLEX_ONE;
 
@@ -211,35 +180,104 @@ main(void)
 		(void *) coefs);
 
 
+	/* obtain uniform links */
+	GLuint u_idx_poly = glGetUniformBlockIndex(program, "Poly");
+	GLuint u_idx_affine = glGetUniformLocation(program, "u_affine");
 
-	/* link uniform buffer with */
-	GLuint blockIdx = glGetUniformBlockIndex(program, "Poly");
-	glUniformBlockBinding(program, blockIdx, 0);
+	glUniformBlockBinding(program, u_idx_poly, 0);
+
+
+	/* render parameters */
+	vec2 translation = {
+		0.0f, 0.0f,
+	};
+	vec2 scale = {
+		1.0f, 1.0f,
+	};
+	float angle = 0.0f;
 
 
 	/* render */
+	double tmold = glfwGetTime();
 	while (!glfwWindowShouldClose(win)) {
 		glClear(GL_COLOR_BUFFER_BIT | 
 				GL_DEPTH_BUFFER_BIT |
 				GL_STENCIL_BUFFER_BIT);
 
-		/* draw surface */
+		double tmnow = glfwGetTime();
+		double tmdelta = tmnow - tmold;
+
+		bool dshift = 
+			glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+			glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+
+		/* translation mechanics */
+		if (glfwGetKey(win, GLFW_KEY_H) == GLFW_PRESS) { /* left */
+			translation[0] -= tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_J) == GLFW_PRESS) { /* down */
+			translation[1] -= tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_K) == GLFW_PRESS) { /* up */
+			translation[1] += tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_L) == GLFW_PRESS) { /* right */
+			translation[0] += tmdelta;
+		}
+
+		/* scaling mechanics - + = zoom out, zoom in */
+		if (glfwGetKey(win, GLFW_KEY_MINUS) == GLFW_PRESS) {
+			glm_vec2_scale(scale, powf(1.25f, tmdelta), scale);
+		}
+		if (dshift && glfwGetKey(win, GLFW_KEY_EQUAL) == GLFW_PRESS) {
+			glm_vec2_scale(scale, powf(0.75f, tmdelta), scale);
+		}
+
+		/* rotation mechanics [ ] = left, right */
+		if (glfwGetKey(win, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS) { 
+			/* counter-clockwise */
+			angle += tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS) {
+			/* clockwise */
+			angle -= tmdelta;
+		}
+
+		/* transform reset */
+		if (glfwGetKey(win, GLFW_KEY_0) == GLFW_PRESS) {
+			glm_vec2_zero(translation);
+			glm_vec2_one(scale);
+			angle = 0.0f;
+		}
+
+		/* transform */
+		mat3 affine;
+		glm_mat3_identity(affine);
+		glm_scale2d(affine, scale);
+		glm_translate2d(affine, translation);
+		glm_rotate2d(affine, angle);
+
+		/* configure shader */
 		glUseProgram(program);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
+		glUniformMatrix3fv(u_idx_affine, 1, GL_FALSE, (float*)affine);
+
+		/* render surface */
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, ELEM_LENGTH, GL_UNSIGNED_INT, (void*)0);
-
-		QUICK_GLERR_CHECK();
-
-		int width, height;
-		glfwGetWindowSize(win, &width, &height);
-		glViewport(0, 0, width, height);
 
 		/* release surface */
 		glUseProgram(0);
 		glBindVertexArray(0);
+		
+		/* resize events don't work with dwm :shrug: */
+		int ww, wh;
+		glfwGetWindowSize(win, &ww, &wh);
+		glViewport(0, 0, ww, wh);
 	
 		glfwSwapBuffers(win);
 		glfwPollEvents();
+		tmold = tmnow;
 	}
 	glfwTerminate();
 

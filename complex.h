@@ -14,15 +14,28 @@ typedef struct
 
 
 complex
-complex_add(complex a, complex b);
+complex_add(
+	complex a, 
+	complex b);
 
 
 complex
-complex_mul(complex a, complex b);
+complex_mul(
+	complex a, 
+	complex b);
 
 
 complex
-complex_div(complex a, complex b);
+complex_div(
+	complex a, 
+	complex b);
+
+
+complex
+complex_combinatoric_fma(
+	complex *terms,
+	int cnt,
+	int k);
 
 
 void

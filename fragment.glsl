@@ -1,18 +1,16 @@
 #version 330 core
 
-// in/out
 in vec4 v_pos;
 
 out vec4 f_color;
 
-// polynomial
-#define NDEGREES 15
-
 uniform Poly {
+#define NDEGREES 15
 	vec4 u_colors[NDEGREES];
 	vec2 u_roots[NDEGREES];
 	vec2 u_coefs[NDEGREES+1];
 };
+uniform mat3 u_affine;
 
 
 vec2 complexmul(vec2 a, vec2 b) {
@@ -62,14 +60,18 @@ vec2 newton(vec2 x, int amt) {
 
 
 void main() {
-    vec2 guess = newton(v_pos.xy, 8);
+	/* transform with affine ; cglm uses mat3x3 q:^( */
+	vec2 pos = (u_affine * vec3(v_pos.xy, 1.0f)).xy;
+
+	/* newton-raphson based algorithm */
+    vec2 guess = newton(pos, 16);
 
 	/* render closest root color */
 	int closeIndex = 0;
-	float closeWeight = 0;
-	for (int i = 0; i < 4; ++i) {
+	float closeWeight = 1e128f;
+	for (int i = 0; i < NDEGREES; ++i) {
 		float weight = distance(u_roots[i], guess);
-		if (weight > closeWeight) {
+		if (weight < closeWeight) {
 			closeIndex = i;
 			closeWeight = weight;
 		}
