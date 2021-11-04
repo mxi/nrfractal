@@ -69,7 +69,7 @@ void main() {
 	/* render closest root color */
 	int closeIndex = 0;
 	float closeWeight = 1e128f;
-	for (int i = 0; i < NDEGREES; ++i) {
+	for (int i = 0; i < 4; ++i) {
 		float weight = distance(u_roots[i], guess);
 		if (weight < closeWeight) {
 			closeIndex = i;

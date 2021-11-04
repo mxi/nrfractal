@@ -14,14 +14,30 @@ typedef struct
 
 
 complex
+complex_uni(float s);
+
+
+complex
 complex_add(
 	complex a, 
 	complex b);
 
 
 complex
+complex_sub(
+	complex a,
+	complex b);
+
+
+complex
 complex_mul(
 	complex a, 
+	complex b);
+
+
+complex
+complex_scale(
+	complex a,
 	complex b);
 
 
@@ -38,7 +54,11 @@ complex_combinatoric_fma(
 	int k);
 
 
-void
+complex
+complex_rand();
+
+
+char *
 complex_str(char *buf, size_t bfsz, complex a);
 
 

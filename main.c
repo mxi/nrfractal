@@ -1,6 +1,8 @@
+#include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 #include <math.h>
  
 #include <GL/glew.h>
@@ -123,29 +125,50 @@ main(void)
 
 
 	/* create polynomial */
+	/* TODO(max): pack colors, roots, etc. into a struct
+	 * identical to GLSL uniform block so we don't have the 
+	 * buffer subdata mess below.
+	 */
 #define NROOTS 4
 #define NDEGREES 15
 
-	vec4 colors[NDEGREES] = {
-		{ 1.0f, 0.0f, 0.0f, 1.0f },
-		{ 0.0f, 1.0f, 0.0f, 1.0f },
-		{ 0.0f, 0.0f, 1.0f, 1.0f },
-		{ 1.0f, 1.0f, 1.0f, 1.0f },
+	vec4 colors[NDEGREES] = { /* just some color palette */
+		/* ocean blue */
+		{ 0.17f, 0.27f, 0.38f, 1.00f },
+		{ 0.88f, 0.91f, 0.88f, 1.00f },
+		{ 0.42f, 0.64f, 0.69f, 1.00f },
+		{ 0.18f, 0.43f, 0.50f, 1.00f },
+
+		/* fruity orange/red */
+		/*
+		{ 1.00f, 0.36f, 0.30f, 1.00f },
+		{ 1.00f, 0.59f, 0.21f, 1.00f },
+		{ 1.00f, 0.80f, 0.35f, 1.00f },
+		{ 0.85f, 0.85f, 0.44f, 1.00f },
+		*/
 	};
 
-	complex roots[NDEGREES] = {
-		{ 0.0f, 0.0f },
-		{ 1.0f, 0.0f },
-		{ 0.0f, 1.0f },
-		{ 1.0f, 1.0f },
-	};
+	complex roots[NDEGREES];
+
+	srand(time(NULL));
+	puts("random roots:");
+	for (int i = 0; i < NROOTS; ++i) {
+		complex c = complex_rand();
+		c = complex_scale(c, complex_uni(2.0f));
+		//c = complex_sub(c, COMPLEX_ONE);
+		roots[i] = c;
+
+		char buf[64];
+		complex_str(buf, 63, c);
+		puts(buf);
+	}
 
 	complex coefs[NDEGREES+1];
 	
 	for (int i = 0; i < NROOTS; ++i) {
 		coefs[i] = complex_combinatoric_fma(roots, NROOTS, NROOTS-i);	
 	}
-	coefs[NDEGREES] = COMPLEX_ONE;
+	coefs[NROOTS] = COMPLEX_ONE;
 
 
 	/* send polynomial to gpu */
@@ -211,26 +234,12 @@ main(void)
 			glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
 			glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
-		/* translation mechanics */
-		if (glfwGetKey(win, GLFW_KEY_H) == GLFW_PRESS) { /* left */
-			translation[0] -= tmdelta;
-		}
-		if (glfwGetKey(win, GLFW_KEY_J) == GLFW_PRESS) { /* down */
-			translation[1] -= tmdelta;
-		}
-		if (glfwGetKey(win, GLFW_KEY_K) == GLFW_PRESS) { /* up */
-			translation[1] += tmdelta;
-		}
-		if (glfwGetKey(win, GLFW_KEY_L) == GLFW_PRESS) { /* right */
-			translation[0] += tmdelta;
-		}
-
 		/* scaling mechanics - + = zoom out, zoom in */
 		if (glfwGetKey(win, GLFW_KEY_MINUS) == GLFW_PRESS) {
-			glm_vec2_scale(scale, powf(1.25f, tmdelta), scale);
+			glm_vec2_scale(scale, powf(1.75f, tmdelta), scale);
 		}
 		if (dshift && glfwGetKey(win, GLFW_KEY_EQUAL) == GLFW_PRESS) {
-			glm_vec2_scale(scale, powf(0.75f, tmdelta), scale);
+			glm_vec2_scale(scale, powf(1.75f, -tmdelta), scale);
 		}
 
 		/* rotation mechanics [ ] = left, right */
@@ -243,6 +252,37 @@ main(void)
 			angle -= tmdelta;
 		}
 
+		/* create the basis for translation */
+		mat3 basis;
+		glm_mat3_identity(basis);
+		glm_rotate2d(basis, angle);
+		glm_scale2d(basis, scale);
+
+		/* translation mechanics */
+		vec3 std_translation = {
+			0.0f, 0.0f, 1.0f
+		};
+
+		if (glfwGetKey(win, GLFW_KEY_H) == GLFW_PRESS) { /* left */
+			std_translation[0] -= tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_J) == GLFW_PRESS) { /* down */
+			std_translation[1] -= tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_K) == GLFW_PRESS) { /* up */
+			std_translation[1] += tmdelta;
+		}
+		if (glfwGetKey(win, GLFW_KEY_L) == GLFW_PRESS) { /* right */
+			std_translation[0] += tmdelta;
+		}
+
+		vec3 translation_delta3;
+		glm_mat3_mulv(basis, std_translation, translation_delta3);
+		
+		vec2 translation_delta;
+		glm_vec2(translation_delta3, translation_delta);
+		glm_vec2_add(translation, translation_delta, translation);
+
 		/* transform reset */
 		if (glfwGetKey(win, GLFW_KEY_0) == GLFW_PRESS) {
 			glm_vec2_zero(translation);
@@ -253,8 +293,8 @@ main(void)
 		/* transform */
 		mat3 affine;
 		glm_mat3_identity(affine);
-		glm_scale2d(affine, scale);
 		glm_translate2d(affine, translation);
+		glm_scale2d(affine, scale);
 		glm_rotate2d(affine, angle);
 
 		/* configure shader */
@@ -270,7 +310,7 @@ main(void)
 		glUseProgram(0);
 		glBindVertexArray(0);
 		
-		/* resize events don't work with dwm :shrug: */
+		/* resize (events don't work with X11/dwm :shrug:) */
 		int ww, wh;
 		glfwGetWindowSize(win, &ww, &wh);
 		glViewport(0, 0, ww, wh);
