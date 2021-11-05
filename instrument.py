@@ -7,7 +7,8 @@ MACRO = 'GL_CHECK'
 
 # Mostly to ignore glGetError inside of the macro itself.
 FILTER = set([
-    'glGetError'
+    'glGetError',
+    'glGetString',
 ])
 
 

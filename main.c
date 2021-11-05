@@ -41,6 +41,16 @@ main(void)
 	}
 
 
+	/* print some gl info */
+	printf("GL_VENDOR: %s\n", 
+			glGetString(GL_VENDOR));
+	printf("GL_RENDERER: %s\n", 
+			glGetString(GL_RENDERER));
+	printf("GL_VERSION: %s\n", 
+			glGetString(GL_VERSION));
+	printf("GL_SHADING_LANGUAGE_VERSION: %s\n", 
+			glGetString(GL_SHADING_LANGUAGE_VERSION));
+
 	/* create surface */
 #define VERTEX_LENGTH 2
 #define VERTEX_COUNT  4
