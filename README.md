@@ -10,12 +10,16 @@ series of videos on the matter:
 
 # Compiling
 
-1. Make sure you have all the OpenGL development packages installed.
-2. GCC 9+ recommended.
-3. (optional) Have Python 3.7+ (if you want GL "instrumentation").
-4. Run `make` OR `make instrument` for GL function wrapping with the
+1. Make sure you have all the OpenGL development packages installed
+2. GCC 11+ recommended
+3. pkg-config v1.8.0
+4. GLEW v2.2.0
+5. GLFW v3.3.4
+6. CGLM v0.8.4
+7. (optional) Have Python 3.7+ (if you want GL "instrumentation").
+8. Run `make` OR `make instrument` for GL function wrapping with the
    `GL_CHECK` debug macro in `glgoodies.h`.
-4. Enjoy with `./a.out`.
+8. Enjoy with `./a.out`.
 
 The program was developed and tested on Linux 5.14.14-arch1-1 (I use 
 arch btw) with the following GL implementation:
@@ -25,10 +29,6 @@ GL_RENDERER: Mesa Intel(R) HD Graphics 530 (SKL GT2)
 GL_VERSION: 4.6 (Core Profile) Mesa 21.2.4
 GL_SHADING_LANGUAGE_VERSION: 4.60
 ```
-
-(I'm either impressed by Intel's GPU managing 60+ fps for 64
-iterations/fragment or with my shader. I'm leaning toward Intel's 
-chip.)
 
 # Controls
 
@@ -45,7 +45,6 @@ navigate the generated fractals:
 This project is far from finished so here are a few items to get done
 sometime:
 
-- [ ] Use multisampled textures to create smoother edges.
 - [ ] Use freetype to get information on the screen.
 - [ ] Runtime shader recompilation for quick iteration.
 - [ ] Hovering root points that may be moved by the user.
@@ -59,3 +58,7 @@ sometime:
       behaviour (OpenGL 4.0+).
 - [ ] (?) General analytical function support.
 
+# Not Implemented
+
+- Multisampled fractal framebuffer doesn't produce a better image—
+  although I might have to look into it a bit more.

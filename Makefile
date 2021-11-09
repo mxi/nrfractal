@@ -13,18 +13,18 @@ OBJECTS := $(SOURCES:.c=.o)
 TARGET := a.out
 
 
-all: $(TARGET)
+all: target
 
 clean:
 	rm $(INSTRUMENTS)
 	rm $(OBJECTS)
 	rm $(TARGET)
 
+target: $(SOURCES)
+	$(CC) $(CFLAGS) -o $(TARGET) $^
+
 instrument: $(INSTRUMENTS)
 	$(CC) -DINSTRUMENT -x c $(CFLAGS) -o $(TARGET) $^
-
-$(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) -o $@ $^
 
 $(OBJECTS): %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ -
@@ -32,4 +32,4 @@ $(OBJECTS): %.o: %.c
 $(INSTRUMENTS): %.inst: %.c
 	./instrument.py $< > $@
 
-.PHONY: all clean instrument
+.PHONY: all clean target instrument
