@@ -209,6 +209,12 @@ main(void)
 			glfwSetWindowShouldClose(win, GLFW_TRUE);
 			continue;
 		}
+		
+		/* resize (events don't work with X11/dwm :shrug:) */
+		int ww, wh;
+		glfwGetWindowSize(win, &ww, &wh);
+		glViewport(0, 0, ww, wh);
+		float aspect = (float) ww / wh;
 
 		double tmnow = glfwGetTime();
 		double tmdelta = tmnow - tmold;
@@ -279,6 +285,7 @@ main(void)
 		glm_translate2d(affine, translation);
 		glm_scale2d(affine, scale);
 		glm_rotate2d(affine, angle);
+		glm_scale2d(affine, (vec2) { aspect, 1.0f });
 
 		/* configure shader */
 		glUseProgram(program);
@@ -292,11 +299,6 @@ main(void)
 		/* release surface */
 		glUseProgram(0);
 		glBindVertexArray(0);
-		
-		/* resize (events don't work with X11/dwm :shrug:) */
-		int ww, wh;
-		glfwGetWindowSize(win, &ww, &wh);
-		glViewport(0, 0, ww, wh);
 	
 		glfwSwapBuffers(win);
 		glfwPollEvents();
