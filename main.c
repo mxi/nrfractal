@@ -12,8 +12,75 @@
 #include <based_gl.h>
 
 #include "util.h"
-#include "complex.h"
 #include "glgoodies.h"
+
+
+char *
+complex_str(char *buf, size_t bfsz, vec2 a) 
+{
+	snprintf(buf, bfsz, "%.2f + %.2fi", a[0], a[1]);
+	return buf;
+}
+
+
+void
+complex_rand(vec2 dest)
+{
+	unsigned int const 
+		exp_one = 127 << 23,
+		float_mask = 0x807fffff;
+	unsigned int const 
+		re = ((rand() & float_mask) | exp_one),
+		im = ((rand() & float_mask) | exp_one);
+	dest[0] = *((float*) &re) - 1.0f;
+	dest[1] = *((float*) &im) - 1.0f;
+}
+
+
+void
+complex_polynomial_factor_expansion_k(
+	vec2 *terms, int cnt, int k, vec2 dest)
+{
+	if (cnt <= 0) {
+		dest[0] = 1.0f;
+		dest[1] = 0.0f;
+		return;
+	}
+	vec2 *nterms = terms + 1;
+	int ncnt = cnt - 1;
+
+	vec2 zero = GLM_VEC2_ZERO_INIT,
+	     one  = GLM_VEC2_ZERO_INIT;
+	if (k < cnt) {
+		complex_polynomial_factor_expansion_k(
+			nterms, ncnt, k, zero);
+	}
+	if (k > 0) {
+		vec2 factor = GLM_VEC2_ZERO_INIT;
+		complex_polynomial_factor_expansion_k(
+			nterms, ncnt, k-1, factor);
+		glm_vec2_complex_mul(
+			terms[0], factor, one);
+	}
+
+/* terms */
+#if 0
+	for (int i = 0; i < cnt; ++i) {
+		char buf[128];
+		complex_str(buf, 127, terms[i]);
+		printf("term[%d] = %s\n", i, buf);
+	}
+#endif
+
+/* zero/one */
+#if 0
+	char bufzero[128], bufone[128];
+	complex_str(bufzero, 127, zero);
+	complex_str(bufone, 127, one);
+	printf("k: %d, zero = %s, one = %s\n", k, bufzero, bufone);
+#endif 
+	glm_vec2_add(zero, one, dest);
+}
 
 
 int
@@ -54,6 +121,7 @@ main(void)
 	printf("GL_SHADING_LANGUAGE_VERSION: %s\n", 
 			glGetString(GL_SHADING_LANGUAGE_VERSION));
 
+
 	/* create surface */
 	float surface[] = {
 		-1.0f, -1.0f,
@@ -70,6 +138,7 @@ main(void)
 			{ NULL },
 		}
 	);
+
 
 	/* create shaders */
 	char const *src_vertex = loadfile("vertex.glsl");
@@ -101,12 +170,13 @@ main(void)
 
 	GLuint program = based_gl_shader_link_and_delete(shaders);
 
+
 	/* create polynomial */
 	/* TODO(max): pack colors, roots, etc. into a struct
 	 * identical to GLSL uniform block so we don't have the 
 	 * buffer subdata mess below.
 	 */
-#define NROOTS 4
+#define NROOTS 3
 #define NDEGREES 15
 
 	vec4 colors[NDEGREES] = { /* just some color palette */
@@ -125,28 +195,38 @@ main(void)
 		*/
 	};
 
-	complex roots[NDEGREES];
+	vec2 roots[NDEGREES];
+	float const hsqrt2 = 0.5f * sqrtf(2.0f);
+	glm_vec2_copy((vec2){ 1.0f, 0.0f }, roots[0]);
+	glm_vec2_copy((vec2){ -hsqrt2,  hsqrt2 }, roots[1]);
+	glm_vec2_copy((vec2){ -hsqrt2, -hsqrt2 }, roots[2]);
+//	srand(time(NULL));
+//	puts("random roots:");
+//	for (int i = 0; i < NROOTS; ++i) {
+//		vec2 c;
+//		complex_rand(c);
+//		glm_vec2_scale(c, 2.0f, c);
+//		glm_vec2_subs(c, 1.0f, c);
+//		glm_vec2_copy(c, roots[i]);
+//
+//		char buf[64];
+//		complex_str(buf, 63, c);
+//		puts(buf);
+//	}
 
-	srand(time(NULL));
-	puts("random roots:");
+	vec2 coefs[NDEGREES+1];
 	for (int i = 0; i < NROOTS; ++i) {
-		complex c = complex_rand();
-		c = complex_scale(c, complex_uni(2.0f));
-		c = complex_sub(c, COMPLEX_ONE);
-		roots[i] = c;
-
-		char buf[64];
-		complex_str(buf, 63, c);
-		puts(buf);
+		complex_polynomial_factor_expansion_k(
+			roots, NROOTS, NROOTS-i, coefs[i]);
 	}
+	glm_vec2_one(coefs[NROOTS]);
 
-	complex coefs[NDEGREES+1];
-	
-	for (int i = 0; i < NROOTS; ++i) {
-		coefs[i] = complex_combinatoric_fma(roots, NROOTS, NROOTS-i);	
+	puts("coefficients:");
+	for (int i = 0; i <= NROOTS; ++i) {
+		char buf[128];
+		complex_str(buf, 127, coefs[i]);
+		printf("pow %d: %s\n", i, buf);
 	}
-	coefs[NROOTS] = COMPLEX_ONE;
-
 
 	/* send polynomial to gpu */
 	GLuint ubo;

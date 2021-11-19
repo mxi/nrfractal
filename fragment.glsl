@@ -64,12 +64,12 @@ void main() {
 	vec2 pos = (u_affine * vec3(v_pos.xy, 1.0f)).xy;
 
 	/* newton-raphson based algorithm */
-    vec2 guess = newton(pos, 16);
+    vec2 guess = newton(pos, 32);
 
 	/* render closest root color */
 	int closeIndex = 0;
 	float closeWeight = 1e128f;
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 3; ++i) {
 		float weight = distance(u_roots[i], guess);
 		if (weight < closeWeight) {
 			closeIndex = i;
