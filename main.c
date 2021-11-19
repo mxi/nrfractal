@@ -1,6 +1,4 @@
-#include <stdlib.h>
 #include <stddef.h>
-#include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
@@ -8,6 +6,10 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cglm/cglm.h>
+
+#define BASED_GL_IMPL
+#include <stb_easy_font.h>
+#include <based_gl.h>
 
 #include "util.h"
 #include "complex.h"
@@ -26,7 +28,8 @@ main(void)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	GLFWwindow *win = glfwCreateWindow(300, 300, "wow", NULL, NULL);
+	GLFWwindow *win = glfwCreateWindow(
+			300, 300, "Newton-Raphson Fractals", NULL, NULL);
 	if (!win) {
 		perror("context");
 		return 1;
@@ -52,87 +55,51 @@ main(void)
 			glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 	/* create surface */
-#define VERTEX_LENGTH 2
-#define VERTEX_COUNT  4
-#define SURFACE_LENGTH (VERTEX_COUNT*VERTEX_LENGTH) 
-#define ELEM_LENGTH 6
-
-	float surface[SURFACE_LENGTH] = {
+	float surface[] = {
 		-1.0f, -1.0f,
 		 1.0f, -1.0f,
 		 1.0f,  1.0f,
 		-1.0f,  1.0f,
 	};
 
-	unsigned int elems[ELEM_LENGTH] = { 
-		0, 1, 2,
-		0, 2, 3,
-	};
-
-	GLuint vbo, ebo, vao;
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vbo);
-	glGenBuffers(1, &ebo);
-
-	glBindVertexArray(vao);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * SURFACE_LENGTH, surface, GL_STATIC_DRAW);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * ELEM_LENGTH, elems, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*) 0);
-
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
+	GLuint vao, vbo, count;
+	based_gl_array_model(
+		&vao, &vbo, &count,
+		(BasedGLAttributeArray[]) {
+			{ surface, sizeof(surface), GL_FLOAT, 2 },
+			{ NULL },
+		}
+	);
 
 	/* create shaders */
 	char const *src_vertex = loadfile("vertex.glsl");
 	char const *src_fragment = loadfile("fragment.glsl");
 
-	GLuint program = glCreateProgram();
-	GLuint shader_vertex = glCreateShader(GL_VERTEX_SHADER);
-	GLuint shader_fragment = glCreateShader(GL_FRAGMENT_SHADER);
-
-	GLint status;
-	glShaderSource(shader_vertex, 1, &src_vertex, NULL);
-	glCompileShader(shader_vertex);
-	glGetShaderiv(shader_vertex, GL_COMPILE_STATUS, &status);
-	if (!status) {
-		char message[8096];
-		glGetShaderInfoLog(shader_vertex, 8095, NULL, message);
-		perror(message);
-	}
-	
-	glShaderSource(shader_fragment, 1, &src_fragment, NULL);
-	glCompileShader(shader_fragment);
-	glGetShaderiv(shader_fragment, GL_COMPILE_STATUS, &status);
-	if (!status) {
-		char message[8096];
-		glGetShaderInfoLog(shader_fragment, 8095, NULL, message);
-		perror(message);
-	}
-
-	glAttachShader(program, shader_vertex);
-	glAttachShader(program, shader_fragment);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &status);
-	if (!status) {
-		char message[8096];
-		glGetProgramInfoLog(program, 8095, NULL, message);
-		perror(message);
-	}
-
-	glUseProgram(0);
-	glDeleteShader(shader_vertex);
-	glDeleteShader(shader_fragment);
+	GLuint shaders[] = {
+		based_gl_shader_compile(GL_VERTEX_SHADER, src_vertex),
+		based_gl_shader_compile(GL_FRAGMENT_SHADER, src_fragment),
+		0
+	};
 
 	free((char *) src_vertex);
 	free((char *) src_fragment);
 
+	/* @HACK(max) I don't know why but on my Arch install I have
+	 * to specifically add some sort of buffer between any shader
+	 * compilation or program linking stage otherwise the shader
+	 * doesn't render properly (I checked with the manual shader
+	 * compilation code and this based_* utility code, both have
+	 * the same problem). 
+	 *
+	 * This could be a bug with GLEW also but I'm running the
+	 * official 2.2.0 release so I somewhat doubt it, either way
+	 * it's strange; disassembly doesn't 
+	 * */
+	char weird_stack_buffer_hack_dont_touch[8192];
+	/* puts here so we can bypass -Wunused */
+	puts(weird_stack_buffer_hack_dont_touch);
+
+	GLuint program = based_gl_shader_link_and_delete(shaders);
 
 	/* create polynomial */
 	/* TODO(max): pack colors, roots, etc. into a struct
@@ -165,7 +132,7 @@ main(void)
 	for (int i = 0; i < NROOTS; ++i) {
 		complex c = complex_rand();
 		c = complex_scale(c, complex_uni(2.0f));
-		//c = complex_sub(c, COMPLEX_ONE);
+		c = complex_sub(c, COMPLEX_ONE);
 		roots[i] = c;
 
 		char buf[64];
@@ -236,6 +203,12 @@ main(void)
 		glClear(GL_COLOR_BUFFER_BIT | 
 				GL_DEPTH_BUFFER_BIT |
 				GL_STENCIL_BUFFER_BIT);
+
+		/* check if user wants out */
+		if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS) {
+			glfwSetWindowShouldClose(win, GLFW_TRUE);
+			continue;
+		}
 
 		double tmnow = glfwGetTime();
 		double tmdelta = tmnow - tmold;
@@ -314,7 +287,7 @@ main(void)
 
 		/* render surface */
 		glBindVertexArray(vao);
-		glDrawElements(GL_TRIANGLES, ELEM_LENGTH, GL_UNSIGNED_INT, (void*)0);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, count);
 
 		/* release surface */
 		glUseProgram(0);
