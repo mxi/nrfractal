@@ -9,7 +9,7 @@
 
 #define BASED_GL_IMPL
 #include <stb_easy_font.h>
-#include <based_gl.h>
+#include "based_gl.h"
 
 #include "util.h"
 #include "glgoodies.h"
@@ -140,6 +140,10 @@ main(void)
 	);
 
 
+	/* create some text (objects, shaders, etc.) */
+
+
+
 	/* create shaders */
 	char const *src_vertex = loadfile("vertex.glsl");
 	char const *src_fragment = loadfile("fragment.glsl");
@@ -196,23 +200,23 @@ main(void)
 	};
 
 	vec2 roots[NDEGREES];
-	float const hsqrt2 = 0.5f * sqrtf(2.0f);
-	glm_vec2_copy((vec2){ 1.0f, 0.0f }, roots[0]);
-	glm_vec2_copy((vec2){ -hsqrt2,  hsqrt2 }, roots[1]);
-	glm_vec2_copy((vec2){ -hsqrt2, -hsqrt2 }, roots[2]);
-//	srand(time(NULL));
-//	puts("random roots:");
-//	for (int i = 0; i < NROOTS; ++i) {
-//		vec2 c;
-//		complex_rand(c);
-//		glm_vec2_scale(c, 2.0f, c);
-//		glm_vec2_subs(c, 1.0f, c);
-//		glm_vec2_copy(c, roots[i]);
-//
-//		char buf[64];
-//		complex_str(buf, 63, c);
-//		puts(buf);
-//	}
+//	float const hsqrt2 = 0.5f * sqrtf(2.0f);
+//	glm_vec2_copy((vec2){ 1.0f, 0.0f }, roots[0]);
+//	glm_vec2_copy((vec2){ -hsqrt2,  hsqrt2 }, roots[1]);
+//	glm_vec2_copy((vec2){ -hsqrt2, -hsqrt2 }, roots[2]);
+	srand(time(NULL));
+	puts("\nrandom roots:");
+	for (int i = 0; i < NROOTS; ++i) {
+		vec2 c;
+		complex_rand(c);
+		glm_vec2_scale(c, 4.0f, c);
+		glm_vec2_subs(c, 2.0f, c);
+		glm_vec2_copy(c, roots[i]);
+
+		char buf[64];
+		complex_str(buf, 63, c);
+		puts(buf);
+	}
 
 	vec2 coefs[NDEGREES+1];
 	for (int i = 0; i < NROOTS; ++i) {
@@ -221,11 +225,11 @@ main(void)
 	}
 	glm_vec2_one(coefs[NROOTS]);
 
-	puts("coefficients:");
+	puts("\ncoefficients:");
 	for (int i = 0; i <= NROOTS; ++i) {
 		char buf[128];
 		complex_str(buf, 127, coefs[i]);
-		printf("pow %d: %s\n", i, buf);
+		printf("z^%d: %s\n", i, buf);
 	}
 
 	/* send polynomial to gpu */
