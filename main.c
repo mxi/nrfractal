@@ -12,7 +12,6 @@
 #include <based_gl.h>
 
 #include "util.h"
-#include "glgoodies.h"
 #include "complex_extra.h"
 
 
